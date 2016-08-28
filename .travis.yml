@@ -15,7 +15,7 @@ install:
 
 # command to run tests
 script:
-  - py.test --cov ntlm_auth --cov-report term-missing tests
+  - py.test --ignore=tests/functional/test_iis.py --cov ntlm_auth --cov-report term-missing tests
 
 after_success:
   - coveralls
