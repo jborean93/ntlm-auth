@@ -188,7 +188,7 @@ class AuthenticateMessage(object):
         :param challenge_message: A ChallengeMessage object that was received from the server after the negotiate_message
         :param ntlm_compatibility: The Lan Manager Compatibility Level, used to determine what NTLM auth version to use, see Ntlm in ntlm.py for more details
         :param server_certificate_hash: The SHA256 hash string of the server certificate (DER encoded) NTLM is authenticating to. This is used to add
-                                          to the gss_channel_bindings_struct for Channel Binding Tokens support. If none is passed through then ntlm_auth
+                                          to the gss_channel_bindings_struct for Channel Binding Tokens support. If none is passed through then ntlm-auth
                                           will not use Channel Binding Tokens when authenticating with the server which could cause issues if it is set to
                                           only authenticate when these are present. This is only used for NTLMv2 authentication.
 

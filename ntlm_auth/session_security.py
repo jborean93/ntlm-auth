@@ -81,7 +81,7 @@ class _NtlmMessageSignature2(object):
 
 class SessionSecurity(object):
     """
-    Initialises a security session context that can be used by libraries that call ntlm_auth to sign and seal
+    Initialises a security session context that can be used by libraries that call ntlm-auth to sign and seal
     messages send to the server as well as verify and unseal messages that have been received from the server.
     This is similar to the GSS_Wrap functions specified in the MS-NLMP document which does the same task.
 

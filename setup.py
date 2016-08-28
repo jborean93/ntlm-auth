@@ -4,13 +4,13 @@
 from setuptools import setup
 
 setup(
-    name='ntlm_auth',
+    name='ntlm-auth',
     version='1.0.0',
     packages=[ 'ntlm_auth' ],
     install_requires=[ 'six' ],
     author='Jordan Borean',
     author_email='jborean93@gmail.com',
-    url='https://github.com/jborean93/ntlm_auth',
+    url='https://github.com/jborean93/ntlm-auth',
     description='Creates NTLM authentication structures',
     long_description="""
         This package can create and parse NTLM authorisation tokens
