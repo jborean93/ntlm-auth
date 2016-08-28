@@ -87,3 +87,10 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# IDEA Files
+.idea
+*~
+
+*.pyc
+*.pyo
