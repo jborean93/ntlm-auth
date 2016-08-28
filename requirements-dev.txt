@@ -1,0 +1,7 @@
+pytest
+pytest-cov
+flake8
+mock
+wheel
+six
+unittest2
