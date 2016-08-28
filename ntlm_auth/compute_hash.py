@@ -30,14 +30,8 @@ def _lmowfv1(password):
     :return res: A Lan Manager hash of the password supplied
     """
 
-    # TODO: is the below still needed, can we make a test for it?
-    # if the password provided is already a hash, we just return the first half
-    if re.match(r'^[\w]{32}:[\w]{32}$', password):
-        return binascii.unhexlify(password.split(':')[0])
-
     # fix the password length to 14 bytes
     password = password.upper()
-    lm_pw = password + '\0' * (14 - len(password))
     lm_pw = password[0:14]
 
     # do hash
@@ -63,11 +57,6 @@ def _ntowfv1(password):
     :param password: The password of the user we are trying to authenticate with
     :return digest: An NT hash of the password supplied
     """
-
-    # TODO: Is this really needed, can we write a test if it is?
-    # if the password provided is already a hash, we just return the second half
-    if re.match(r'^[\w]{32}:[\w]{32}$', password):
-        return binascii.unhexlify(password.split(':')[1])
 
     digest = hashlib.new('md4', password.encode('utf-16le')).digest()
     return digest
