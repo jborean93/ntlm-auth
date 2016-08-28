@@ -1,7 +1,7 @@
 Changes
 =======
 
-1.0.0 (Aug 29, 2016)
+1.0.1 (Aug 29, 2016)
 --------------------
 
 Major fork from python-ntlm3 which is no longer in active maintenance. Features added since that latest release there;
