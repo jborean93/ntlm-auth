@@ -1,6 +1,6 @@
-ntlm_auth
-============
-[![Build Status](https://travis-ci.org/jborean93/ntlm_auth.svg?branch=master)](https://travis-ci.org/jborean93/ntlm_auth)[![Build status](https://ci.appveyor.com/api/projects/status/nistjx4miygvelxa/branch/master?svg=true)](https://ci.appveyor.com/project/jborean93/ntlm_auth/branch/master)[![Coverage Status](https://coveralls.io/repos/github/jborean93/ntlm_auth/badge.svg?branch=master)](https://coveralls.io/github/jborean93/ntlm_auth?branch=master)
+ntlm-auth
+=========
+[![Build Status](https://travis-ci.org/jborean93/ntlm-auth.svg?branch=master)](https://travis-ci.org/jborean93/ntlm-auth)[![Build status](https://ci.appveyor.com/api/projects/status/osvvfgmhfk4anvu0/branch/master?svg=true)](https://ci.appveyor.com/project/jborean93/ntlm-auth/branch/master)[![Coverage Status](https://coveralls.io/repos/github/jborean93/ntlm-auth/badge.svg?branch=master)](https://coveralls.io/github/jborean93/ntlm-auth?branch=master)
 
 This is a fork of [python-ntlm3](https://github.com/trustrachel/python-ntlm3) and massively updated as it is no longer in maintenance.
 
