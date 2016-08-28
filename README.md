@@ -23,11 +23,11 @@ Features
 Installation
 ------------
 
-ntlm_auth supports Python 2.6, 2.7 and 3.3+
+ntlm-auth supports Python 2.6, 2.7 and 3.3+
 
 To install, use pip:
 
-    pip install ntlm_auth
+    pip install ntlm-auth
 
 To install from source, download the source code, then run:
 
@@ -38,7 +38,7 @@ Usage
 
 Almost all users should use [requests-ntlm](https://github.com/requests/requests-ntlm) instead of this library. The library requests-ntlm is a plugin that uses this library under the hood and provides an easier function to use and understand.
 
-If you are set on using ntlm_auth directly to compute the message structures this is a very basic outline of how it can be done. The code examples are psuedocode and should be adapted for your purpose.
+If you are set on using ntlm-auth directly to compute the message structures this is a very basic outline of how it can be done. The code examples are psuedocode and should be adapted for your purpose.
 
 When initliasing the ntlm context you will have to supply the NTLM compatibility level. The key difference between the different auth levels are the ntlm_compatibility variable supplied when initialising Ntlm. An overview of what each sets is below;
 * `0` - LM Auth and NTLMv1 Auth
