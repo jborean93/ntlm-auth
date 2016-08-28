@@ -15,7 +15,7 @@ install:
 
 # command to run tests
 script:
-  - py.test --cov ntlm_auth --cov-report term-missing test
+  - py.test --cov ntlm_auth --cov-report term-missing tests
 
 after_success:
   - coveralls
