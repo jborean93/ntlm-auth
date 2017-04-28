@@ -3,20 +3,32 @@
 
 from setuptools import setup
 
+# PyPi supports only reStructuredText, so pandoc should be installed
+# before uploading package
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except ImportError:
+    long_description = ''
+
+install_requires = [ 'six' ]
+# Python 2.6 doesn't have OrderedDict inbuilt, use the ordereddict library
+# instead
+try:
+    from collections import OrderedDict
+except ImportError:
+    install_requires.append('ordereddict')
+	
 setup(
     name='ntlm-auth',
-    version='1.0.2',
+    version='1.0.3',
     packages=[ 'ntlm_auth' ],
-    install_requires=[ 'six', 'ordereddict' ],
+    install_requires=install_requires,
     author='Jordan Borean',
     author_email='jborean93@gmail.com',
     url='https://github.com/jborean93/ntlm-auth',
     description='Creates NTLM authentication structures',
-    long_description="""
-        This package can create and parse NTLM authorisation tokens
-        with all the latest standards such as NTLMv2, Extended Protection
-        (CBT), message integrity and confidentiality (signing and sealing).
-    """,
+    long_description=long_description,
     keywords='authentication auth microsoft ntlm lm',
     license='GNU Lesser GPL',
     classifiers=[
