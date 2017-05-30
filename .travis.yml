@@ -10,7 +10,8 @@ python:
 
 # command to install dependencies
 install:
-  - python setup.py install
+  - pip install -U pip setuptools
+  - pip install .
   - pip install -r requirements-dev.txt
   - pip install python-coveralls
 

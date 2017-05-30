@@ -1,6 +1,11 @@
 Changes
 =======
 
+1.0.2-1.0.4
+-----------
+
+* Various changes to get Python packaging to work with ordereddict no code changes
+
 1.0.1 (Aug 29, 2016)
 --------------------
 
