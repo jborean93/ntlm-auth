@@ -11,19 +11,14 @@ try:
 except ImportError:
     long_description = ''
 
-install_requires = [ 'six' ]
-# Python 2.6 doesn't have OrderedDict inbuilt, use the ordereddict library
-# instead
-try:
-    from collections import OrderedDict
-except ImportError:
-    install_requires.append('ordereddict')
-	
 setup(
     name='ntlm-auth',
-    version='1.0.3',
+    version='1.0.4',
     packages=[ 'ntlm_auth' ],
-    install_requires=install_requires,
+    install_requires=[
+        "six",
+        "ordereddict ; python_version<'2.7'"
+    ],
     author='Jordan Borean',
     author_email='jborean93@gmail.com',
     url='https://github.com/jborean93/ntlm-auth',
