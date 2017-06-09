@@ -26,10 +26,15 @@ def _lmowfv1(password):
     Same function as LMOWFv1 in document to create a one way hash of the password. Only
     used in NTLMv1 auth without session security
 
-    :param password: The password of the user we are trying to authenticate with
+    :param password: The password or hash of the user we are trying to authenticate with
     :return res: A Lan Manager hash of the password supplied
     """
-
+    
+    # if the password is a hash, return the LM hash
+    if re.match(r'^[a-fA-F\d]{32}:[a-fA-F\d]{32}$', password):
+        lm_hash = binascii.unhexlify(password.split(':')[0])
+        return lm_hash
+    
     # fix the password length to 14 bytes
     password = password.upper()
     lm_pw = password[0:14]
@@ -54,10 +59,15 @@ def _ntowfv1(password):
     Same function as NTOWFv1 in document to create a one way hash of the password. Only
     used in NTLMv1 auth without session security
 
-    :param password: The password of the user we are trying to authenticate with
+    :param password: The password or hash of the user we are trying to authenticate with
     :return digest: An NT hash of the password supplied
     """
-
+    
+    # if the password is a hash, return the NT hash
+    if re.match(r'^[a-fA-F\d]{32}:[a-fA-F\d]{32}$', password):
+        nt_hash = binascii.unhexlify(password.split(':')[1])
+        return nt_hash
+    
     digest = hashlib.new('md4', password.encode('utf-16le')).digest()
     return digest
 
