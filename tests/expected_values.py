@@ -16,6 +16,7 @@ from .utils import HexToByte
 user_name = 'User'
 domain_name = 'Domain'
 password = 'Password'
+password_hash = 'e52cac67419a9a224a3b108f3fa6cb6d:a4f49c406510bdcab6824ee7c30fd852'
 server_name = HexToByte('53 00 65 00 72 00 76 00 65 00 72 00')
 workstation_name = HexToByte('43 00 4f 00 4d 00 50 00 55 00 54 00 45 00 52 00').decode()
 
