@@ -40,6 +40,14 @@ class Test_ComputeHash(unittest.TestCase):
     def test_ntofv1_hash(self):
         expected = ntlmv1_ntowfv1
 
-        actual = comphash._ntofv2(user_name, password_hash, domain_name)
+        actual = comphash._ntowfv1(password)
+
+        assert actual == expected
+
+    # 4.2.4.1.1 - NTOWFv2() and LMOWFv2()
+    def test_ntowfv2(self):
+        expected = ntlmv2_ntowfv2
+
+        actual = comphash._ntowfv2(user_name, password, domain_name)
 
         assert actual == expected
