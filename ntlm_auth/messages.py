@@ -139,8 +139,9 @@ class ChallengeMessage(object):
         self.server_challenge = msg2[24:32]
         self.reserved = msg2[32:40]
 
-        if self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_VERSION and self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY:
-            size = len(msg2)
+        if self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_VERSION and \
+                        self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY and \
+                        len(msg2) > 48:
             self.version = struct.unpack("<q", msg2[48:56])[0]
         else:
             self.version = None
