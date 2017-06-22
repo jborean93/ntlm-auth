@@ -1,13 +1,15 @@
-Changes
-=======
+# Changes
 
-1.0.2-1.0.4
------------
+## 1.0.5 (Jun 22, 2017)
+
+* Added support for password hashes when using NTLMv1 authentication
+* Better handling of servers that fully conform to the NTLM spec, will check before trying to get the Version field in a challenge message instead of just failing.
+
+## 1.0.2-1.0.4
 
 * Various changes to get Python packaging to work with ordereddict no code changes
 
-1.0.1 (Aug 29, 2016)
---------------------
+## 1.0.1 (Aug 29, 2016)
 
 Major fork from python-ntlm3 which is no longer in active maintenance. Features added since that latest release there;
 
