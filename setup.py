@@ -16,9 +16,13 @@ setup(
     version='1.0.5',
     packages=[ 'ntlm_auth' ],
     install_requires=[
-        "six",
-        "ordereddict ; python_version<'2.7'"
+        'six'
     ],
+    extras_require={
+        ':python_version<"2.7"': [
+            'ordereddict'
+        ]
+    },
     author='Jordan Borean',
     author_email='jborean93@gmail.com',
     url='https://github.com/jborean93/ntlm-auth',
