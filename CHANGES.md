@@ -1,5 +1,9 @@
 # Changes
 
+## 1.0.6 (Oct 16, 2017)
+
+* More changes to packaging to better handle copyright and licensing
+
 ## 1.0.5 (Jun 22, 2017)
 
 * Added support for password hashes when using NTLMv1 authentication

@@ -1,3 +1,5 @@
+# Copyright 2016 Jordan Borean <jborean93@gmail.com>
+#
 # This library is free software: you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation, either
@@ -12,32 +14,11 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/> or <http://www.gnu.org/licenses/lgpl.txt>.
 
 import base64
-import socket
 import struct
 from ntlm_auth.constants import NegotiateFlags
 from ntlm_auth.messages import NegotiateMessage, ChallengeMessage, AuthenticateMessage
 from ntlm_auth.session_security import SessionSecurity
 
-
-"""
-utility functions for Microsoft NTLM authentication
-
-References:
-[MS-NLMP]: NT LAN Manager (NTLM) Authentication Protocol Specification
-http://download.microsoft.com/download/a/e/6/ae6e4142-aa58-45c6-8dcf-a657e5900cd3/%5BMS-NLMP%5D.pdf
-
-[MS-NTHT]: NTLM Over HTTP Protocol Specification
-http://download.microsoft.com/download/a/e/6/ae6e4142-aa58-45c6-8dcf-a657e5900cd3/%5BMS-NTHT%5D.pdf
-
-Cntlm Authentication Proxy
-http://cntlm.awk.cz/
-
-NTLM Authorization Proxy Server
-http://sourceforge.net/projects/ntlmaps/
-
-Optimized Attack for NTLM2 Session Response
-http://www.blackhat.com/presentations/bh-asia-04/bh-jp-04-pdfs/bh-jp-04-seki.pdf
-"""
 
 class Ntlm(object):
     """
