@@ -13,11 +13,9 @@ except ImportError:
 
 setup(
     name='ntlm-auth',
-    version='1.0.6',
-    packages=[ 'ntlm_auth' ],
-    install_requires=[
-        'six'
-    ],
+    version='1.1.0',
+    packages=['ntlm_auth'],
+    install_requires=[],
     extras_require={
         ':python_version<"2.7"': [
             'ordereddict'
@@ -29,10 +27,10 @@ setup(
     description='Creates NTLM authentication structures',
     long_description=long_description,
     keywords='authentication auth microsoft ntlm lm',
-    license='GNU Lesser GPL',
+    license='MIT',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
@@ -40,5 +38,6 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6'
     ],
 )
