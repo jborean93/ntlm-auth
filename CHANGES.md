@@ -1,6 +1,6 @@
 # Changes
 
-## 1.1.0 (TBD)
+## 1.1.0 (Mar 7, 2018)
 
 * Removed DES code as the license was found to be incorrect from the source
 * Added new DES code not based on the original

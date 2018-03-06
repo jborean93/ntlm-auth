@@ -2,7 +2,10 @@ ntlm-auth
 =========
 [![Build Status](https://travis-ci.org/jborean93/ntlm-auth.svg?branch=master)](https://travis-ci.org/jborean93/ntlm-auth)[![Build status](https://ci.appveyor.com/api/projects/status/osvvfgmhfk4anvu0/branch/master?svg=true)](https://ci.appveyor.com/project/jborean93/ntlm-auth/branch/master)[![Coverage Status](https://coveralls.io/repos/github/jborean93/ntlm-auth/badge.svg?branch=master)](https://coveralls.io/github/jborean93/ntlm-auth?branch=master)
 
-This is a fork of [python-ntlm3](https://github.com/trustrachel/python-ntlm3) and massively updated as it is no longer in maintenance.
+This was originally a fork of
+[python-ntlm3](https://github.com/trustrachel/python-ntlm3) but has changed
+substantially since to support newer features like NTLMv2 and encryption
+that was not present before.
 
 About this library
 ------------------

@@ -198,7 +198,6 @@ class ChallengeMessage(object):
                 domain environment this is the domain name not server name
             target_info: When NTLMSSP_NEGOTIATE_TARGET_INFO is set is a byte
                 array that contains a sequence of AV_PAIR structures
-                (target_info.py)
         """
 
         self.data = msg2
