@@ -168,12 +168,11 @@ class DES(object):
 
         return encrypted_data
 
-    def decrypt(self, data, trim=True):
+    def decrypt(self, data):
         """
         DES decrypts the data based on the key it was initialised with.
 
         :param data: The encrypted bytes string to decrypt
-        :param trim: Whether to strip of right padded null bytes
         :return: The decrypted bytes string
         """
         decrypted_data = b""
@@ -186,7 +185,7 @@ class DES(object):
 
             decrypted_data += self._decode_block(block)
 
-        return decrypted_data.rstrip(b"\x00") if trim else decrypted_data
+        return decrypted_data
 
     @staticmethod
     def key56_to_key64(key):

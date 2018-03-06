@@ -15,9 +15,7 @@ setup(
     name='ntlm-auth',
     version='1.1.0',
     packages=['ntlm_auth'],
-    install_requires=[
-        'six'
-    ],
+    install_requires=[],
     extras_require={
         ':python_version<"2.7"': [
             'ordereddict'

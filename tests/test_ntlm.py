@@ -527,8 +527,25 @@ class TestNtlmFunctional(object):
         Sends a request to the url with the credentials specified. Returns the
         final response
         """
-        from urllib3.exceptions import InsecureRequestWarning
-        warnings.simplefilter('ignore', category=InsecureRequestWarning)
+        # filter out warnings around older Python and unverified connections
+        try:
+            from requests.packages.urllib3.exceptions import \
+                InsecurePlatformWarning
+            warnings.simplefilter('ignore', category=InsecurePlatformWarning)
+        except ImportError:
+            pass
+
+        try:
+            from requests.packages.urllib3.exceptions import SNIMissingWarning
+            warnings.simplefilter('ignore', category=SNIMissingWarning)
+        except ImportError:
+            pass
+
+        try:
+            from urllib3.exceptions import InsecureRequestWarning
+            warnings.simplefilter('ignore', category=InsecureRequestWarning)
+        except ImportError:
+            pass
 
         url = "%s://%s:%d/contents.txt" \
               % ('http' if str(port).startswith('8') else 'https',

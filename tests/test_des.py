@@ -61,22 +61,12 @@ class TestDES(object):
 
     def test_decrypt_large_bytes_padding(self):
         des = DES(b"PASSWORD")
-        expected = b"abcdefghijklmnopqrstuvwxyz"
-        data = b"\x15\x14\x4f\x75\x8c\x83\xd0\x34" \
-               b"\xe6\x19\x4b\xe6\x51\x22\xe3\x91" \
-               b"\x68\x02\xa9\xd8\x6c\x04\x1f\x2d" \
-               b"\x95\x1d\xc7\x12\xe4\x7c\x79\x04"
-        actual = des.decrypt(data)
-        assert actual == expected
-
-    def test_decrypt_large_bytes_no_padding(self):
-        des = DES(b"PASSWORD")
         expected = b"abcdefghijklmnopqrstuvwxyz\x00\x00\x00\x00\x00\x00"
         data = b"\x15\x14\x4f\x75\x8c\x83\xd0\x34" \
                b"\xe6\x19\x4b\xe6\x51\x22\xe3\x91" \
                b"\x68\x02\xa9\xd8\x6c\x04\x1f\x2d" \
                b"\x95\x1d\xc7\x12\xe4\x7c\x79\x04"
-        actual = des.decrypt(data, trim=False)
+        actual = des.decrypt(data)
         assert actual == expected
 
     def test_decrypt_fail_invalid_size(self):
@@ -86,8 +76,8 @@ class TestDES(object):
         assert str(exc.value) == "DES decryption must be a multiple of 8 bytes"
 
     def test_encrypt_decrypt_multiple_keys(self):
-        # run 10 random tests with random keys and data
-        for i in range(10):
+        # run random tests with random keys and data
+        for i in range(512):
             des = DES(os.urandom(8))
             data = os.urandom(16)
             enc_data = des.encrypt(data)
