@@ -1,32 +1,11 @@
-# Copyright 2016 Jordan Borean <jborean93@gmail.com>
-#
-# This library is free software: you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License as published by the Free Software Foundation, either
-# version 3 of the License, or (at your option) any later version.
-
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library.  If not, see <http://www.gnu.org/licenses/> or <http://www.gnu.org/licenses/lgpl.txt>.
+# Copyright: (c) 2018, Jordan Borean (@jborean93) <jborean93@gmail.com>
+# MIT License (see LICENSE or https://opensource.org/licenses/MIT)
 
 import struct
 
-"""
-    This is not the easiest structure to understand, ultimately this is a set structure
-    as defined by Microsoft. Channel Binding Tokens set the SHA256 hash of the server
-    certificate to the application_data field and then ultimately creates the MD5 hash
-    to include in the NTLM auth from there. This class is just designed to create the
-    bindings structure which is then used by compute_response.py to do the rest of the
-    work.
 
-    For more infor on how this works and how it is derived, this is a great link;
-    https://blogs.msdn.microsoft.com/openspecification/2013/03/26/ntlm-and-channel-binding-hash-aka-extended-protection-for-authentication/
-"""
 class GssChannelBindingsStruct(object):
+
     INITIATOR_ADDTYPE = 'initiator_addtype'
     INITIATOR_ADDRESS_LENGTH = 'initiator_address_length'
     ACCEPTOR_ADDRTYPE = 'acceptor_addrtype'
@@ -37,33 +16,47 @@ class GssChannelBindingsStruct(object):
     APPLICATION_DATA = 'application_data'
 
     def __init__(self):
-        self.fields = {}
-        self.fields[self.INITIATOR_ADDTYPE] = 0
-        self.fields[self.INITIATOR_ADDRESS_LENGTH] = 0
-        self.fields[self.ACCEPTOR_ADDRTYPE] = 0
-        self.fields[self.ACCEPTOR_ADDRESS_LENGTH] = 0
-        self.fields[self.APPLICATION_DATA_LENGTH] = 0
-        self.fields[self.INITIATOR_ADDRESS] = b''
-        self.fields[self.ACCEPTOR_ADDRESS] = b''
-        self.fields[self.APPLICATION_DATA] = b''
+        """
+        Used to send the out of band channel info as part of the authentication
+        process. This is used as a way of verifying the target is who it says
+        it is as this information is provided by the higher layer. In most
+        cases, the CBT is just the hash of the server's TLS certificate to the
+        application_data field.
+
+        This bytes string of the packed structure is then MD5 hashed and
+        included in the NTv2 response.
+        """
+        self.fields = {
+            self.INITIATOR_ADDTYPE: 0,
+            self.INITIATOR_ADDRESS_LENGTH: 0,
+            self.ACCEPTOR_ADDRTYPE: 0,
+            self.ACCEPTOR_ADDRESS_LENGTH: 0,
+            self.APPLICATION_DATA_LENGTH: 0,
+            self.INITIATOR_ADDRESS: b"",
+            self.ACCEPTOR_ADDRESS: b"",
+            self.APPLICATION_DATA: b""
+        }
 
     def __setitem__(self, key, value):
         self.fields[key] = value
 
+    def __getitem__(self, key):
+        return self.fields[key]
+
     def get_data(self):
         # Set the lengths of each len field in case they have changed
-        self.fields[self.INITIATOR_ADDRESS_LENGTH] = len(self.fields[self.INITIATOR_ADDRESS])
-        self.fields[self.ACCEPTOR_ADDRESS_LENGTH] = len(self.fields[self.ACCEPTOR_ADDRESS])
-        self.fields[self.APPLICATION_DATA_LENGTH] = len(self.fields[self.APPLICATION_DATA])
+        self[self.INITIATOR_ADDRESS_LENGTH] = len(self[self.INITIATOR_ADDRESS])
+        self[self.ACCEPTOR_ADDRESS_LENGTH] = len(self[self.ACCEPTOR_ADDRESS])
+        self[self.APPLICATION_DATA_LENGTH] = len(self[self.APPLICATION_DATA])
 
         # Add all the values together to create the gss_channel_bindings_struct
-        data = struct.pack('<L', self.fields[self.INITIATOR_ADDTYPE]) + \
-               struct.pack('<L', self.fields[self.INITIATOR_ADDRESS_LENGTH]) + \
-               self.fields[self.INITIATOR_ADDRESS] + \
-               struct.pack('<L', self.fields[self.ACCEPTOR_ADDRTYPE]) + \
-               struct.pack('<L', self.fields[self.ACCEPTOR_ADDRESS_LENGTH]) + \
-               self.fields[self.ACCEPTOR_ADDRESS] + \
-               struct.pack('<L', self.fields[self.APPLICATION_DATA_LENGTH]) + \
-               self.fields[self.APPLICATION_DATA]
+        data = struct.pack("<L", self[self.INITIATOR_ADDTYPE])
+        data += struct.pack("<L", self[self.INITIATOR_ADDRESS_LENGTH])
+        data += self[self.INITIATOR_ADDRESS]
+        data += struct.pack("<L", self[self.ACCEPTOR_ADDRTYPE])
+        data += struct.pack("<L", self[self.ACCEPTOR_ADDRESS_LENGTH])
+        data += self[self.ACCEPTOR_ADDRESS]
+        data += struct.pack("<L", self[self.APPLICATION_DATA_LENGTH])
+        data += self[self.APPLICATION_DATA]
 
         return data

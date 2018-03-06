@@ -1,5 +1,13 @@
 # Changes
 
+## 1.1.0 (TBD)
+
+* Removed DES code as the license was found to be incorrect from the source
+* Added new DES code not based on the original
+* Fixed up some deprecation warnings
+* Changed tests from running unittest to py.test
+* Changed licence from GPL to MIT as code is not all my own
+
 ## 1.0.6 (Oct 16, 2017)
 
 * More changes to packaging to better handle copyright and licensing

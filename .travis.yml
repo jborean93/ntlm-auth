@@ -1,24 +1,21 @@
 language: python
 
 python:
-  - "2.6"
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.6"
+- "2.6"
+- "2.7"
+- "3.3"
+- "3.4"
+- "3.5"
+- "3.6"
 
-# command to install dependencies
 install:
-  - pip install -U pip setuptools
-  - pip install .
-  - pip install -r requirements-dev.txt
-  - pip install python-coveralls
+- pip install -U pip setuptools
+- pip install .
+- pip install -r requirements-test.txt
+- pip install python-coveralls
 
-# command to run tests
 script:
-  - py.test --ignore=tests/functional/test_iis.py --cov ntlm_auth --cov-report term-missing tests
+- py.test -v --pep8 --cov ntlm_auth --cov-report term-missing
 
 after_success:
-  - coveralls
-
+- coveralls
