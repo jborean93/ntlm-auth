@@ -2,11 +2,6 @@ ntlm-auth
 =========
 [![Build Status](https://travis-ci.org/jborean93/ntlm-auth.svg?branch=master)](https://travis-ci.org/jborean93/ntlm-auth)[![Build status](https://ci.appveyor.com/api/projects/status/osvvfgmhfk4anvu0/branch/master?svg=true)](https://ci.appveyor.com/project/jborean93/ntlm-auth/branch/master)[![Coverage Status](https://coveralls.io/repos/github/jborean93/ntlm-auth/badge.svg?branch=master)](https://coveralls.io/github/jborean93/ntlm-auth?branch=master)
 
-This was originally a fork of
-[python-ntlm3](https://github.com/trustrachel/python-ntlm3) but has changed
-substantially since to support newer features like NTLMv2 and encryption
-that was not present before.
-
 About this library
 ------------------
 
@@ -56,11 +51,11 @@ Level 3 to 5 are the same from a client perspective but differ with how the serv
 Extended Session Security is a security feature designed to increase the security of LM and NTLMv1 auth. It is no substitution for NTLMv2 but is better than nothing and should be used if possible when you need NTLMv1 compatibility.
 
 The variables required are outlined below;
-* `user_name` - The username to authenticate with, should not have the domain prefix, i.e. USER not DOMAIN\\USER
+* `username` - The username to authenticate with, should not have the domain prefix, i.e. USER not DOMAIN\\USER
 * `password` - The password of the user to authenticate with
-* `domain_name` - The domain of the user, i.e. DOMAIN. Can be blank if not in a domain environment
+* `domain` - The domain of the user, i.e. DOMAIN. Can be blank if not in a domain environment
 * `workstation` - The workstation you are running on. Can be blank if you do not wish to send this
-* `server_certificate_hash` - (NTLMv2 only) The SHA256 hash of the servers DER encoded certificate. Used to calculate the Channel Binding Tokens and should be added even if it isn't required. Can be blank but auth will fail if the server requires this hash.
+* `cbt_data` - (NTLMv2 only) The `gss_channel_bindings.GssChannelBindingsStruct` used to bind with the auth response. Can be None if no binding needs to occur
 
 
 #### LM Auth/NTLMv1 Auth
@@ -70,20 +65,20 @@ LM and NTLMv1 Auth are older authentication methods that should be avoided where
 ```python
 import socket
 
-from ntlm_auth.ntlm import Ntlm
+from ntlm_auth.ntlm import NtlmContext
 
-user_name = 'User'
+username = 'User'
 password = 'Password'
-domain_name = 'Domain' # Can be blank if you are not in a domain
+domain = 'Domain' # Can be blank if you are not in a domain
 workstation = socket.gethostname().upper() # Can be blank if you wish to not send this info
 
-ntlm_context = Ntlm(ntlm_compatibility=0) # Put the ntlm_compatibility level here, 0-2 for LM Auth/NTLMv1 Auth
-negotiate_message = ntlm_context.create_negotiate_message(domain_name, workstation).decode()
+ntlm_context = NtlmContext(username, password, domain, workstation, ntlm_compatibility=0) # Put the ntlm_compatibility level here, 0-2 for LM Auth/NTLMv1 Auth
+negotiate_message = ntlm_context.step()
 
 # Attach the negotiate_message to your NTLM/NEGOTIATE HTTP header and send to the server. Get the challenge response back from the server
 challenge_message = http.response.headers['HEADERFIELD']
 
-authenticate_message = ntlm_context.create_authenticate_message(user_name, password, domain_name, workstation).decode()
+authenticate_message = ntlm_context.step(challenge_message)
 
 # Attach the authenticate_message ot your NTLM_NEGOTIATE HTTP header and send to the server. You are now authenticated with NTLMv1
 ```
@@ -93,23 +88,30 @@ authenticate_message = ntlm_context.create_authenticate_message(user_name, passw
 NTLMv2 Auth is the newest NTLM auth method from Microsoft and should be the option chosen by default unless you require an older auth method. The implementation is the same as NTLMv1 but with the addition of the optional `server_certificate_hash` variable and the `ntlm_compatibility` is not specified.
 
 ```python
+import base64
 import socket
 
-from ntlm_auth.ntlm import Ntlm
+from ntlm_auth.gss_channel_bindings import GssChannelBindingsStruct
+from ntlm_auth.ntlm import NtlmContext
 
-user_name = 'User'
+username = 'User'
 password = 'Password'
-domain_name = 'Domain' # Can be blank if you are not in a domain
+domain = 'Domain' # Can be blank if you are not in a domain
 workstation = socket.gethostname().upper() # Can be blank if you wish to not send this info
-server_certificate_hash = '96B2FC1EC30792619286A0C7FD62863E81A6564E72829CBC0A46F7B1D5D92A18' # Can be blank if you don't want CBT sent
 
-ntlm_context = Ntlm()
-negotiate_message = ntlm_context.create_negotiate_message(domain_name, workstation).decode()
+# create the CBT struct if you wish to bind it with the auth response
+server_certificate_hash = '96B2FC1EC30792619286A0C7FD62863E81A6564E72829CBC0A46F7B1D5D92A18'
+certificate_digest = base64.b16decode(server_certificate_hash)
+cbt_data = GssChannelBindingsStruct()
+cbt_data[cbt_data.APPLICATION_DATA] = b'tls-server-end-point:' + certificate_digest
+
+ntlm_context = NtlmContext(username, password, domain, workstation, cbt_data, ntlm_compatibility=3)
+negotiate_message = ntlm_context.step()
 
 # Attach the negotiate_message to your NTLM/NEGOTIATE HTTP header and send to the server. Get the challenge response back from the server
 challenge_message = http.response.headers['HEADERFIELD']
 
-authenticate_message = ntlm_context.create_authenticate_message(user_name, password, domain_name, workstation, server_certificate_hash).decode()
+authenticate_message = ntlm_context.step(challenge_message)
 
 # Attach the authenticate_message ot your NTLM_NEGOTIATE HTTP header and send to the server. You are now authenticated with NTLMv1
 ```
@@ -119,40 +121,40 @@ authenticate_message = ntlm_context.create_authenticate_message(user_name, passw
 All version of NTLM supports signing (integrity) and sealing (confidentiality) of message content. This function can add these improvements to a message that is sent and received from the server. While it does encrypt the data if supported by the server it is only done with RC4 with a 128-bit key which is not very secure and on older systems this key length could be 56 or 40 bit. This functionality while tested and conforms with the Microsoft documentation has yet to be fully tested in an integrated environment. Once again this has not been thoroughly tested and has only passed unit tests and their expections.
 
 ```python
+import base64
 import socket
 
-from ntlm_auth.ntlm import Ntlm
+from ntlm_auth.ntlm import NtlmContext
 
-user_name = 'User'
+username = 'User'
 password = 'Password'
-domain_name = 'Domain' # Can be blank if you are not in a domain
+domain = 'Domain' # Can be blank if you are not in a domain
 workstation = socket.gethostname().upper() # Can be blank if you wish to not send this info
-msg_data = "Message to send to the server"
-server_certificate_hash = '96B2FC1EC30792619286A0C7FD62863E81A6564E72829CBC0A46F7B1D5D92A18' # Can be blank if you don't want CBT sent
 
-ntlm_context = Ntlm()
-negotiate_message = ntlm_context.create_negotiate_message(domain_name, workstation).decode()
+# create the CBT struct if you wish to bind it with the auth response
+server_certificate_hash = '96B2FC1EC30792619286A0C7FD62863E81A6564E72829CBC0A46F7B1D5D92A18'
+certificate_digest = base64.b16decode(server_certificate_hash)
+cbt_data = GssChannelBindingsStruct()
+cbt_data[cbt_data.APPLICATION_DATA] = b'tls-server-end-point:' + certificate_digest
+
+ntlm_context = NtlmContext(username, password, domain, workstation, cbt_data, ntlm_compatibility=3)
+negotiate_message = ntlm_context.step()
 
 # Attach the negotiate_message to your NTLM/NEGOTIATE HTTP header and send to the server. Get the challenge response back from the server
 challenge_message = http.response.headers['HEADERFIELD']
 
-authenticate_message = ntlm_context.create_authenticate_message(user_name, password, domain_name, workstation, server_certificate_hash).decode()
+authenticate_message = ntlm_context.step(challenge_message)
 
-if ntlm_context.session_security is None:
-    raise Exception("Server does not support signing and sealing")
-else:
-    session_security = ntlm_context.session_security
+# Attach the authenticate_message ot your NTLM_NEGOTIATE HTTP header and send to the server. You are now authenticated with NTLMv1
 
-# Encrypt the msg with the sealing function and send the message
-msg_data, msg_signature = session_security.wrap(msg_data)
+# Encrypt the message with the wrapping function and send the message
+enc_message = ntlm_context.wrap("Message to send", encrypt=True)
 request.body = msg_data
-request.header = "NTLM %s" % authenticate_message
 request.send
 
-# Receive the response the from the server
-response_msg = response.body[bodyindex]
-response_signature = response.body[signatureindex]
-response_msg = session_security.unwrap(response_msg, response_signature)
+# Receive the response from the server and decrypt
+response_msg = response.content
+response = ntlm_context.unwrap(response_msg)
 ```
 
 Backlog

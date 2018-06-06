@@ -8,6 +8,7 @@ import hmac
 import os
 import struct
 import time
+import warnings
 
 import ntlm_auth.compute_hash as comphash
 import ntlm_auth.compute_keys as compkeys
@@ -101,7 +102,7 @@ class ComputeResponse():
         return response
 
     def get_nt_challenge_response(self, lm_challenge_response,
-                                  server_certificate_hash):
+                                  server_certificate_hash=None, cbt_data=None):
         """
         [MS-NLMP] v28.0 2016-07-14
 
@@ -117,10 +118,10 @@ class ComputeResponse():
 
         :param lm_challenge_response: The LmChallengeResponse calculated
             beforehand, used to get the key_exchange_key value
-        :param server_certificate_hash: The SHA256 hash of the server
-            certificate (DER encoded) NTLM is authenticated to. Used in Channel
-            Binding Tokens if present, default value is None. See
-            AuthenticateMessage in messages.py for more details
+        :param server_certificate_hash: This is deprecated and will be removed
+            in a future version, use cbt_data instead
+        :param cbt_data: The GssChannelBindingsStruct to bind in the NTLM
+            response
         :return response: (NtChallengeResponse) - The NT response to the server
             challenge. Computed by the client
         :return session_base_key: (SessionBaseKey) - A session key calculated
@@ -178,11 +179,21 @@ class ComputeResponse():
                 target_info[AvId.MSV_AV_FLAGS] = \
                     struct.pack("<L", AvFlags.MIC_PROVIDED)
 
-            if server_certificate_hash is not None:
-                channel_bindings_hash = \
-                    self._get_channel_bindings_value(server_certificate_hash)
-                target_info[AvId.MSV_AV_CHANNEL_BINDINGS] = \
-                    channel_bindings_hash
+            if server_certificate_hash is not None and cbt_data is None:
+                warnings.warn("Manually creating the cbt stuct from the cert "
+                              "hash will be removed in a newer version of "
+                              "ntlm-auth. Send the actual CBT struct using "
+                              "cbt_data instead", DeprecationWarning)
+                certificate_digest = base64.b16decode(server_certificate_hash)
+
+                cbt_data = GssChannelBindingsStruct()
+                cbt_data[cbt_data.APPLICATION_DATA] = \
+                    b'tls-server-end-point:' + certificate_digest
+
+            if cbt_data is not None:
+                cbt_bytes = cbt_data.get_data()
+                cbt_hash = hashlib.md5(cbt_bytes).digest()
+                target_info[AvId.MSV_AV_CHANNEL_BINDINGS] = cbt_hash
 
             response, session_base_key = \
                 self._get_NTLMv2_response(self._user_name, self._password,
@@ -444,38 +455,6 @@ class ComputeResponse():
         dobj = DES(DES.key56_to_key64(password_hash[14:21]))
         res = res + dobj.encrypt(server_challenge[0:8])
         return res
-
-    @staticmethod
-    def _get_channel_bindings_value(server_certificate_hash):
-        """
-        Get's the MD5 hash of the gss_channel_bindings_struct to add to the
-        AV_PAIR MSV_AV_CHANNEL_BINDINGS. This method takes in the SHA256 hash
-        (Hash of the DER encoded certificate of the server we are connecting
-        to) and add's it to the gss_channel_bindings_struct. It then gets the
-        MD5 hash and converts this to a byte array in preparation of adding it
-        to the AV_PAIR structure.
-
-        :param server_certificate_hash: The SHA256 hash of the server
-            certificate (DER encoded) NTLM is authenticated to
-        :return channel_bindings: An MD5 hash of the
-            gss_channel_bindings_struct to add to the AV_PAIR
-            MsvChannelBindings
-        """
-        # Channel Binding Tokens support, used for NTLMv2
-        # Decode the SHA256 certificate hash
-        certificate_digest = base64.b16decode(server_certificate_hash)
-
-        # Initialise the GssChannelBindingsStruct and add the
-        # certificate_digest to the application_data field
-        gss_channel_bindings = GssChannelBindingsStruct()
-        gss_channel_bindings[gss_channel_bindings.APPLICATION_DATA] = \
-            b'tls-server-end-point:' + certificate_digest
-
-        # Get the gss_channel_bindings_struct and create an MD5 hash
-        channel_bindings_struct_data = gss_channel_bindings.get_data()
-        channel_bindings = hashlib.md5(channel_bindings_struct_data).digest()
-
-        return channel_bindings
 
 
 def get_windows_timestamp():

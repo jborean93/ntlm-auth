@@ -254,7 +254,7 @@ class AuthenticateMessage(object):
 
     def __init__(self, user_name, password, domain_name, workstation,
                  challenge_message, ntlm_compatibility,
-                 server_certificate_hash):
+                 server_certificate_hash=None, cbt_data=None):
         """
         [MS-NLMP] v28.0 2016-07-14
 
@@ -276,13 +276,9 @@ class AuthenticateMessage(object):
         :param ntlm_compatibility: The Lan Manager Compatibility Level, used to
             determine what NTLM auth version to use, see Ntlm in ntlm.py for
             more details
-        :param server_certificate_hash: The SHA256 hash string of the server
-            certificate (DER encoded) NTLM is authenticating to. This is used
-            to add to the gss_channel_bindings_struct for Channel Binding
-            Tokens support. If none is passed through then ntlm-auth will not
-            use Channel Binding Tokens when authenticating with the server
-            which could cause issues if it is set to only authenticate when
-            these are present. This is only used for NTLMv2 authentication.
+        :param server_certificate_hash: Deprecated, used cbt_data instead
+        :param cbt_data: The GssChannelBindingsStruct that contains the CBT
+            data to bind in the auth response
 
         Message Attributes (Attributes used to compute the message structure):
             signature: An 8-byte character array that MUST contain the ASCII
@@ -351,7 +347,7 @@ class AuthenticateMessage(object):
             compute_response.get_lm_challenge_response()
         self.nt_challenge_response, key_exchange_key, target_info = \
             compute_response.get_nt_challenge_response(
-                self.lm_challenge_response, server_certificate_hash)
+                self.lm_challenge_response, server_certificate_hash, cbt_data)
         self.target_info = target_info
 
         if self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_KEY_EXCH:
