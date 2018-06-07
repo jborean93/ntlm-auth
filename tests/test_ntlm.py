@@ -9,10 +9,11 @@ import pytest
 
 from requests.auth import AuthBase
 
-from ntlm_auth.constants import AvId, MessageTypes, NegotiateFlags, \
-    NTLM_SIGNATURE
-from ntlm_auth.messages import TargetInfo
-from ntlm_auth.ntlm import Ntlm
+from ntlm_auth.constants import NegotiateFlags
+from ntlm_auth.exceptions import NoAuthContextError
+from ntlm_auth.gss_channel_bindings import GssChannelBindingsStruct
+from ntlm_auth.ntlm import Ntlm, NtlmContext
+from ntlm_auth.session_security import SessionSecurity
 
 default_negotiate_flags = NegotiateFlags.NTLMSSP_NEGOTIATE_TARGET_INFO | \
                           NegotiateFlags.NTLMSSP_NEGOTIATE_128 | \
@@ -130,56 +131,6 @@ class TestMessages(object):
         actual = ntlm_context.create_negotiate_message("Domain", "COMPUTER")
         assert actual == expected
 
-    def test_parse_challenge_message(self):
-        test_target_info = TargetInfo()
-        test_target_info[AvId.MSV_AV_NB_DOMAIN_NAME] = \
-            "Domain".encode('utf-16-le')
-        test_target_info[AvId.MSV_AV_NB_COMPUTER_NAME] = \
-            "Server".encode('utf-16-le')
-        test_challenge_string = base64.b64encode(
-            b"\x4e\x54\x4c\x4d\x53\x53\x50\x00"
-            b"\x02\x00\x00\x00\x03\x00\x0c\x00"
-            b"\x38\x00\x00\x00\x33\x82\x8a\xe2"
-            b"\x01\x23\x45\x67\x89\xab\xcd\xef"
-            b"\x00\x00\x00\x00\x00\x00\x00\x00"
-            b"\x24\x00\x24\x00\x44\x00\x00\x00"
-            b"\x06\x00\x70\x17\x00\x00\x00\x0f"
-            b"\x53\x00\x65\x00\x72\x00\x76\x00"
-            b"\x65\x00\x72\x00\x02\x00\x0c\x00"
-            b"\x44\x00\x6f\x00\x6d\x00\x61\x00"
-            b"\x69\x00\x6e\x00\x01\x00\x0c\x00"
-            b"\x53\x00\x65\x00\x72\x00\x76\x00"
-            b"\x65\x00\x72\x00\x00\x00\x00\x00"
-        )
-        test_ntlm_context = Ntlm()
-        test_ntlm_context.parse_challenge_message(test_challenge_string)
-
-        expected_message_type = MessageTypes.NTLM_CHALLENGE
-        expected_negotiate_flags = 3800728115
-        expected_server_challenge = b"\x01\x23\x45\x67\x89\xab\xcd\xef"
-        expected_signature = NTLM_SIGNATURE
-        expected_target_info = test_target_info.pack()
-        expected_target_name = None
-        expected_version = 1080863910962135046
-
-        actual = test_ntlm_context.challenge_message
-
-        actual_message_type = actual.message_type
-        actual_negotiate_flags = actual.negotiate_flags
-        actual_server_challenge = actual.server_challenge
-        actual_signature = actual.signature
-        actual_target_info = actual.target_info.pack()
-        actual_target_name = actual.target_name
-        actual_version = actual.version
-
-        assert actual_message_type == expected_message_type
-        assert actual_negotiate_flags == expected_negotiate_flags
-        assert actual_server_challenge == expected_server_challenge
-        assert actual_signature == expected_signature
-        assert actual_target_info == expected_target_info
-        assert actual_target_name == expected_target_name
-        assert actual_version == expected_version
-
     def test_create_authenticate_message(self, monkeypatch):
         monkeypatch.setattr('os.urandom', lambda s: b"\xaa" * 8)
         monkeypatch.setattr('ntlm_auth.messages.get_version',
@@ -191,7 +142,7 @@ class TestMessages(object):
 
         test_challenge_string = base64.b64encode(
             b"\x4e\x54\x4c\x4d\x53\x53\x50\x00"
-            b"\x02\x00\x00\x00\x03\x00\x0c\x00"
+            b"\x02\x00\x00\x00\x2f\x82\x88\xe2"
             b"\x38\x00\x00\x00\x33\x82\x8a\xe2"
             b"\x01\x23\x45\x67\x89\xab\xcd\xef"
             b"\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -204,16 +155,10 @@ class TestMessages(object):
             b"\x53\x00\x65\x00\x72\x00\x76\x00"
             b"\x65\x00\x72\x00\x00\x00\x00\x00"
         )
+
         test_ntlm_context = Ntlm()
         test_ntlm_context.create_negotiate_message("Domain", "COMPUTER")
         test_ntlm_context.parse_challenge_message(test_challenge_string)
-        # Need to override the flags in the challenge message to match the
-        # expectation, these flags are inconsequential and are done manually
-        # for sanity
-        test_ntlm_context.challenge_message.negotiate_flags -= \
-            NegotiateFlags.NTLMSSP_TARGET_TYPE_SERVER
-        test_ntlm_context.challenge_message.negotiate_flags |= \
-            NegotiateFlags.NTLMSSP_REQUEST_TARGET
 
         expected_message = base64.b64encode(
             b"\x4e\x54\x4c\x4d\x53\x53\x50\x00"
@@ -223,7 +168,7 @@ class TestMessages(object):
             b"\x48\x00\x00\x00\x08\x00\x08\x00"
             b"\x54\x00\x00\x00\x10\x00\x10\x00"
             b"\x5c\x00\x00\x00\x10\x00\x10\x00"
-            b"\xd8\x00\x00\x00\x35\x82\x88\xe2"
+            b"\xd8\x00\x00\x00\x31\x82\x8a\xe2"
             b"\x05\x01\x28\x0a\x00\x00\x00\x0f"
             b"\x44\x00\x6f\x00\x6d\x00\x61\x00"
             b"\x69\x00\x6e\x00\x55\x00\x73\x00"
@@ -250,6 +195,7 @@ class TestMessages(object):
         actual_message = \
             test_ntlm_context.create_authenticate_message("User", "Password",
                                                           "Domain", "COMPUTER")
+
         actual_session_security = test_ntlm_context.session_security
 
         assert actual_message == expected_message
@@ -267,7 +213,7 @@ class TestMessages(object):
         test_challenge_string = base64.b64encode(
             b"\x4e\x54\x4c\x4d\x53\x53\x50\x00"
             b"\x02\x00\x00\x00\x03\x00\x0c\x00"
-            b"\x38\x00\x00\x00\x33\x82\x8a\xe2"
+            b"\x38\x00\x00\x00\x03\x92\x8a\xe2"
             b"\x01\x23\x45\x67\x89\xab\xcd\xef"
             b"\x00\x00\x00\x00\x00\x00\x00\x00"
             b"\x24\x00\x24\x00\x44\x00\x00\x00"
@@ -282,20 +228,6 @@ class TestMessages(object):
         test_ntlm_context = Ntlm()
         test_ntlm_context.create_negotiate_message("Domain", "COMPUTER")
         test_ntlm_context.parse_challenge_message(test_challenge_string)
-        # Need to override the sign and seal flags so they don't return a
-        # security context
-        test_ntlm_context.negotiate_flags -= \
-            NegotiateFlags.NTLMSSP_NEGOTIATE_SIGN
-        test_ntlm_context.negotiate_flags -=\
-            NegotiateFlags.NTLMSSP_NEGOTIATE_SEAL
-
-        # Need to override the flags in the challenge message to match the
-        # expectation, these flags are inconsequential and are done manualy for
-        # sanity
-        test_ntlm_context.challenge_message.negotiate_flags -= \
-            NegotiateFlags.NTLMSSP_TARGET_TYPE_SERVER
-        test_ntlm_context.challenge_message.negotiate_flags |= \
-            NegotiateFlags.NTLMSSP_REQUEST_TARGET
 
         expected_message = base64.b64encode(
             b"\x4e\x54\x4c\x4d\x53\x53\x50\x00"
@@ -305,7 +237,7 @@ class TestMessages(object):
             b"\x48\x00\x00\x00\x08\x00\x08\x00"
             b"\x54\x00\x00\x00\x10\x00\x10\x00"
             b"\x5c\x00\x00\x00\x10\x00\x10\x00"
-            b"\xd8\x00\x00\x00\x35\x82\x88\xe2"
+            b"\xd8\x00\x00\x00\x01\x92\x8a\xe2"
             b"\x05\x01\x28\x0a\x00\x00\x00\x0f"
             b"\x44\x00\x6f\x00\x6d\x00\x61\x00"
             b"\x69\x00\x6e\x00\x55\x00\x73\x00"
@@ -336,6 +268,153 @@ class TestMessages(object):
 
         assert actual_message == expected_message
         assert actual_session_security is None
+
+        # now test the properties map up the the correct NtlmContext ones
+        assert test_ntlm_context.authenticate_message == \
+            test_ntlm_context._context._authenticate_message
+        test_ntlm_context.authenticate_message = b"1"
+        assert test_ntlm_context._context._authenticate_message == b"1"
+
+        assert test_ntlm_context.challenge_message == \
+            test_ntlm_context._context._challenge_message
+        test_ntlm_context.challenge_message = b"2"
+        assert test_ntlm_context._context._challenge_message == b"2"
+
+        assert test_ntlm_context.negotiate_flags == \
+            test_ntlm_context._context.negotiate_flags
+        test_ntlm_context.negotiate_flags = 1
+        assert test_ntlm_context._context.negotiate_flags == 1
+
+        assert test_ntlm_context.negotiate_message == \
+            test_ntlm_context._context._negotiate_message
+        test_ntlm_context.negotiate_message = b"3"
+        assert test_ntlm_context._context._negotiate_message == b"3"
+
+        assert test_ntlm_context.ntlm_compatibility == \
+            test_ntlm_context._context.ntlm_compatibility
+        test_ntlm_context.ntlm_compatibility = 2
+        assert test_ntlm_context._context.ntlm_compatibility == 2
+
+        assert test_ntlm_context.session_security == \
+            test_ntlm_context._context._session_security
+        test_ntlm_context.session_security = b"4"
+        assert test_ntlm_context._context._session_security == b"4"
+
+
+class TestNtlmContext(object):
+
+    def test_ntlm_context(self, monkeypatch):
+        monkeypatch.setattr('os.urandom', lambda s: b"\xaa" * 8)
+        monkeypatch.setattr('ntlm_auth.messages.get_version',
+                            lambda s: b"\x05\x01\x28\x0A\x00\x00\x00\x0F")
+        monkeypatch.setattr('ntlm_auth.messages.get_random_export_session_key',
+                            lambda: b"\x55" * 16)
+        monkeypatch.setattr('ntlm_auth.compute_response.get_windows_timestamp',
+                            lambda: b"\x00" * 8)
+
+        import binascii
+
+        ch = 'E3CA49271E5089CC48CE82109F1324F41DBEDDC29A777410C738F7868C4FF405'
+        cbt_data = GssChannelBindingsStruct()
+        cbt_data[cbt_data.APPLICATION_DATA] = b"tls-server-end-point:" + \
+                                              base64.b16decode(ch)
+        ntlm_context = NtlmContext("User", "Password", "Domain", "COMPUTER",
+                                   cbt_data=cbt_data)
+        actual_nego = ntlm_context.step()
+        expected_nego = b"\x4e\x54\x4c\x4d\x53\x53\x50\x00" \
+                        b"\x01\x00\x00\x00\x32\xb0\x88\xe2" \
+                        b"\x06\x00\x06\x00\x28\x00\x00\x00" \
+                        b"\x08\x00\x08\x00\x2e\x00\x00\x00" \
+                        b"\x05\x01\x28\x0a\x00\x00\x00\x0f" \
+                        b"\x44\x6f\x6d\x61\x69\x6e\x43\x4f" \
+                        b"\x4d\x50\x55\x54\x45\x52"
+        assert actual_nego == expected_nego
+        assert not ntlm_context.complete
+
+        challenge_msg = b"\x4e\x54\x4c\x4d\x53\x53\x50\x00" \
+                        b"\x02\x00\x00\x00\x2f\x82\x88\xe2" \
+                        b"\x38\x00\x00\x00\x33\x82\x8a\xe2" \
+                        b"\x01\x23\x45\x67\x89\xab\xcd\xef" \
+                        b"\x00\x00\x00\x00\x00\x00\x00\x00" \
+                        b"\x24\x00\x24\x00\x44\x00\x00\x00" \
+                        b"\x06\x00\x70\x17\x00\x00\x00\x0f" \
+                        b"\x53\x00\x65\x00\x72\x00\x76\x00" \
+                        b"\x65\x00\x72\x00\x02\x00\x0c\x00" \
+                        b"\x44\x00\x6f\x00\x6d\x00\x61\x00" \
+                        b"\x69\x00\x6e\x00\x01\x00\x0c\x00" \
+                        b"\x53\x00\x65\x00\x72\x00\x76\x00" \
+                        b"\x65\x00\x72\x00\x00\x00\x00\x00"
+        actual_auth = ntlm_context.step(challenge_msg)
+        expected_auth = b'\x4e\x54\x4c\x4d\x53\x53\x50\x00' \
+                        b'\x03\x00\x00\x00\x18\x00\x18\x00' \
+                        b'\x6c\x00\x00\x00\x68\x00\x68\x00' \
+                        b'\x84\x00\x00\x00\x0c\x00\x0c\x00' \
+                        b'\x48\x00\x00\x00\x08\x00\x08\x00' \
+                        b'\x54\x00\x00\x00\x10\x00\x10\x00' \
+                        b'\x5c\x00\x00\x00\x10\x00\x10\x00' \
+                        b'\xec\x00\x00\x00\x31\x82\x8a\xe2' \
+                        b'\x05\x01\x28\x0a\x00\x00\x00\x0f' \
+                        b'\x44\x00\x6f\x00\x6d\x00\x61\x00' \
+                        b'\x69\x00\x6e\x00\x55\x00\x73\x00' \
+                        b'\x65\x00\x72\x00\x43\x00\x4f\x00' \
+                        b'\x4d\x00\x50\x00\x55\x00\x54\x00' \
+                        b'\x45\x00\x52\x00\x86\xc3\x50\x97' \
+                        b'\xac\x9c\xec\x10\x25\x54\x76\x4a' \
+                        b'\x57\xcc\xcc\x19\xaa\xaa\xaa\xaa' \
+                        b'\xaa\xaa\xaa\xaa\x04\x10\xc4\x7a' \
+                        b'\xcf\x19\x97\x89\xde\x7f\x20\x11' \
+                        b'\x95\x7a\xea\x50\x01\x01\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\xaa\xaa\xaa\xaa' \
+                        b'\xaa\xaa\xaa\xaa\x00\x00\x00\x00' \
+                        b'\x02\x00\x0c\x00\x44\x00\x6f\x00' \
+                        b'\x6d\x00\x61\x00\x69\x00\x6e\x00' \
+                        b'\x01\x00\x0c\x00\x53\x00\x65\x00' \
+                        b'\x72\x00\x76\x00\x65\x00\x72\x00' \
+                        b'\x0a\x00\x10\x00\x6e\xa1\x9d\xf0' \
+                        b'\x66\xda\x46\x22\x05\x1f\x9c\x4f' \
+                        b'\x92\xc6\xdf\x74\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\xe5\x69\x95\x1d' \
+                        b'\x15\xd4\x73\x5f\x49\xe1\x4c\xf9' \
+                        b'\xa7\xd3\xe6\x72'
+
+        assert actual_auth == expected_auth
+        assert ntlm_context.complete
+
+        request_msg = b"test req"
+        response_msg = b"test res"
+        actual_wrapped = ntlm_context.wrap(request_msg)
+        expected_wrapped = b"\x01\x00\x00\x00\xbc\xe3\x23\xa1" \
+                           b"\x72\x06\x23\x78\x00\x00\x00\x00" \
+                           b"\x70\x80\x1e\x11\xfe\x6b\x3a\xad"
+        assert actual_wrapped == expected_wrapped
+
+        server_sec = SessionSecurity(
+            ntlm_context._session_security.negotiate_flags,
+            ntlm_context._session_security.exported_session_key, "server"
+        )
+        server_unwrap = server_sec.unwrap(actual_wrapped[16:],
+                                          actual_wrapped[0:16])
+        assert server_unwrap == request_msg
+
+        response_wrapped = server_sec.wrap(response_msg)
+
+        actual_unwrap = ntlm_context.unwrap(
+            response_wrapped[1] + response_wrapped[0]
+        )
+        assert actual_unwrap == response_msg
+
+    def test_fail_wrap_no_context(self):
+        ntlm_context = NtlmContext("", "")
+        with pytest.raises(NoAuthContextError) as err:
+            ntlm_context.wrap(b"")
+        assert str(err.value) == \
+            "Cannot wrap data as no security context has been established"
+
+        with pytest.raises(NoAuthContextError) as err:
+            ntlm_context.unwrap(b"")
+        assert str(err.value) == \
+            "Cannot unwrap data as no security context has been established"
 
 
 class TestNtlmFunctional(object):
@@ -483,7 +562,7 @@ class TestNtlmFunctional(object):
         assert actual_code == 200
         assert actual_content == "contents"
 
-    def test_ntlm_3_http_with_cbt(self, runner):
+    def test_ntlm_3_http_with_cbt_dep(self, runner):
         actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
                                     81, 3)
         actual_content = actual.content.decode('utf-8')
@@ -492,7 +571,7 @@ class TestNtlmFunctional(object):
         assert actual_code == 200
         assert actual_content == "contents"
 
-    def test_ntlm_3_http_without_cbt(self, runner):
+    def test_ntlm_3_http_without_cbt_dep(self, runner):
         actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
                                     82, 3)
         actual_content = actual.content.decode('utf-8')
@@ -501,7 +580,7 @@ class TestNtlmFunctional(object):
         assert actual_code == 200
         assert actual_content == "contents"
 
-    def test_ntlm_3_https_with_cbt(self, runner):
+    def test_ntlm_3_https_with_cbt_dep(self, runner):
         actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
                                     441, 3)
         actual_content = actual.content.decode('utf-8')
@@ -512,7 +591,7 @@ class TestNtlmFunctional(object):
         assert actual_code == 200
         assert actual_content == "contents"
 
-    def test_ntlm_3_https_without_cbt(self, runner):
+    def test_ntlm_3_https_without_cbt_dep(self, runner):
         actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
                                     442, 3)
         actual_content = actual.content.decode('utf-8')
@@ -521,8 +600,46 @@ class TestNtlmFunctional(object):
         assert actual_code == 200
         assert actual_content == "contents"
 
+    def test_ntlm_3_http_with_cbt(self, runner):
+        actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
+                                    81, 3, legacy=False)
+        actual_content = actual.content.decode('utf-8')
+        actual_code = actual.status_code
+
+        assert actual_code == 200
+        assert actual_content == "contents"
+
+    def test_ntlm_3_http_without_cbt(self, runner):
+        actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
+                                    82, 3, legacy=False)
+        actual_content = actual.content.decode('utf-8')
+        actual_code = actual.status_code
+
+        assert actual_code == 200
+        assert actual_content == "contents"
+
+    def test_ntlm_3_https_with_cbt(self, runner):
+        actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
+                                    441, 3, legacy=False)
+        actual_content = actual.content.decode('utf-8')
+        actual_code = actual.status_code
+
+        # Only case where CBT should work as we are using NTLMv2 as the auth
+        # type
+        assert actual_code == 200
+        assert actual_content == "contents"
+
+    def test_ntlm_3_https_without_cbt(self, runner):
+        actual = self._send_request(runner[0], runner[1], runner[2], runner[3],
+                                    442, 3, legacy=False)
+        actual_content = actual.content.decode('utf-8')
+        actual_code = actual.status_code
+
+        assert actual_code == 200
+        assert actual_content == "contents"
+
     def _send_request(self, server, domain, username, password, port,
-                      ntlm_compatibility):
+                      ntlm_compatibility, legacy=True):
         """
         Sends a request to the url with the credentials specified. Returns the
         final response
@@ -552,7 +669,8 @@ class TestNtlmFunctional(object):
                  server, port)
         session = requests.Session()
         session.verify = False
-        session.auth = NtlmAuth(domain, username, password, ntlm_compatibility)
+        session.auth = NtlmAuth(domain, username, password, ntlm_compatibility,
+                                legacy)
         request = requests.Request('GET', url)
         prepared_request = session.prepare_request(request)
         response = session.send(prepared_request)
@@ -563,11 +681,12 @@ class TestNtlmFunctional(object):
 # used by the functional tests to auth with an NTLM endpoint
 class NtlmAuth(AuthBase):
 
-    def __init__(self, domain, username, password, ntlm_compatibility):
+    def __init__(self, domain, username, password, ntlm_compatibility, legacy):
         self.username = username
         self.domain = domain.upper()
         self.password = password
-        self.context = Ntlm(ntlm_compatibility=ntlm_compatibility)
+        self.ntlm_compatibility = ntlm_compatibility
+        self.legacy = legacy
 
     def __call__(self, response):
         response.headers['Connection'] = 'Keep-Alive'
@@ -576,9 +695,15 @@ class NtlmAuth(AuthBase):
 
     def hook(self, response, **kwargs):
         if response.status_code == 401:
-            return self.retry_with_ntlm_auth('www-authenticate',
-                                             'Authorization', response,
-                                             'NTLM', kwargs)
+            if self.legacy:
+                return self.retry_with_ntlm_auth_legacy('www-authenticate',
+                                                        'Authorization',
+                                                        response, 'NTLM',
+                                                        kwargs)
+            else:
+                return self.retry_with_ntlm_auth('www-authenticate',
+                                                 'Authorization', response,
+                                                 'NTLM', kwargs)
         else:
             return response
 
@@ -586,8 +711,15 @@ class NtlmAuth(AuthBase):
                              auth_type, args):
         try:
             cert_hash = self._get_server_cert(response)
+            cbt_data = GssChannelBindingsStruct()
+            cbt_data[cbt_data.APPLICATION_DATA] = b"tls-server-end-point:" + \
+                                                  base64.b16decode(cert_hash)
         except Exception:
-            cert_hash = None
+            cbt_data = None
+
+        context = NtlmContext(self.username, self.password, self.domain,
+                              cbt_data=cbt_data,
+                              ntlm_compatibility=self.ntlm_compatibility)
 
         # Consume the original response contents and release the connection for
         # later
@@ -596,7 +728,50 @@ class NtlmAuth(AuthBase):
 
         # Create the negotiate request
         msg1_req = response.request.copy()
-        msg1 = self.context.create_negotiate_message(self.domain)
+        msg1 = context.step()
+        msg1_header = "%s %s" % (auth_type, base64.b64encode(msg1).decode())
+        msg1_req.headers[auth_header] = msg1_header
+
+        # Send the negotiate request and receive the challenge message
+        disable_stream_args = dict(args, stream=False)
+        msg2_resp = response.connection.send(msg1_req, **disable_stream_args)
+        msg2_resp.content
+        msg2_resp.raw.release_conn()
+
+        # Parse the challenge response in the ntlm_context
+        msg2_header = msg2_resp.headers[auth_header_field]
+        msg2 = msg2_header.replace(auth_type + ' ', '')
+        msg3 = context.step(base64.b64decode(msg2))
+
+        # Create the authenticate request
+        msg3_req = msg2_resp.request.copy()
+        msg3_header = auth_type + ' ' + base64.b64encode(msg3).decode()
+        msg3_req.headers[auth_header] = msg3_header
+
+        # Send the authenticate request
+        final_response = msg2_resp.connection.send(msg3_req, **args)
+        final_response.history.append(response)
+        final_response.history.append(msg2_resp)
+
+        return final_response
+
+    def retry_with_ntlm_auth_legacy(self, auth_header_field, auth_header,
+                                    response, auth_type, args):
+        try:
+            cert_hash = self._get_server_cert(response)
+        except Exception:
+            cert_hash = None
+
+        context = Ntlm(ntlm_compatibility=self.ntlm_compatibility)
+
+        # Consume the original response contents and release the connection for
+        # later
+        response.content
+        response.raw.release_conn()
+
+        # Create the negotiate request
+        msg1_req = response.request.copy()
+        msg1 = context.create_negotiate_message(self.domain)
         msg1_header = "%s %s" % (auth_type, msg1.decode('ascii'))
         msg1_req.headers[auth_header] = msg1_header
 
@@ -609,12 +784,12 @@ class NtlmAuth(AuthBase):
         # Parse the challenge response in the ntlm_context
         msg2_header = msg2_resp.headers[auth_header_field]
         msg2 = msg2_header.replace(auth_type + ' ', '')
-        self.context.parse_challenge_message(msg2)
+        context.parse_challenge_message(msg2)
 
         # Create the authenticate request
         msg3_req = msg2_resp.request.copy()
 
-        msg3 = self.context.create_authenticate_message(
+        msg3 = context.create_authenticate_message(
             self.username, self.password, self.domain,
             server_certificate_hash=cert_hash
         )

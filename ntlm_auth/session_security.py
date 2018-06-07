@@ -99,6 +99,7 @@ class SessionSecurity(object):
             when testing out a server sealing and unsealing
         """
         self.negotiate_flags = negotiate_flags
+        self.exported_session_key = exported_session_key
         self.outgoing_seq_num = 0
         self.incoming_seq_num = 0
 

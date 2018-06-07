@@ -123,16 +123,6 @@ class TestHashResults(object):
         assert actual_response == expected_response
         assert actual_key == expected_key
 
-    def test_channel_bindings_value(self):
-        # No example is explicitly set in MS-NLMP, using a random certificate
-        # hash and checking with the expected outcome
-        expected = b"\x6E\xA1\x9D\xF0\x66\xDA\x46\x22" \
-                   b"\x05\x1F\x9C\x4F\x92\xC6\xDF\x74"
-        cert_hash = \
-            "E3CA49271E5089CC48CE82109F1324F41DBEDDC29A777410C738F7868C4FF405"
-        actual = ComputeResponse._get_channel_bindings_value(cert_hash)
-        assert actual == expected
-
 
 class TestChallengeResults(object):
 

@@ -13,8 +13,6 @@ environment:
   # https://www.appveyor.com/docs/installed-software/#python
   - PYTHON: Python27
   - PYTHON: Python27-x64
-  - PYTHON: Python33
-  - PYTHON: Python33-x64
   - PYTHON: Python34
   - PYTHON: Python34-x64
   - PYTHON: Python35
@@ -27,7 +25,6 @@ services:
 
 init:
 - ps: |
-    $ErrorActionPreference = "Stop"
     # Override default Python version/architecture
     $env:Path="C:\$env:PYTHON;C:\$env:PYTHON\Scripts;$env:PATH"
     python -c "import platform; print('Python', platform.python_version(), platform.architecture()[0])"
