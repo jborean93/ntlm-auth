@@ -5,6 +5,7 @@
 * Deprecated ntlm_auth.ntlm.Ntlm in favour of ntlm_auth.ntlm.NtlmContext
 * This is because `Ntlm` is heavily geared towards HTTP auth which is not always the case, `NtlmContext` makes things more generic
 * Updated docs and tests to reflect this
+* Dropped support for Python 3.3
 
 ## 1.1.0 (Mar 7, 2018)
 

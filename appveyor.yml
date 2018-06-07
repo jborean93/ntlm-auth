@@ -13,8 +13,6 @@ environment:
   # https://www.appveyor.com/docs/installed-software/#python
   - PYTHON: Python27
   - PYTHON: Python27-x64
-  - PYTHON: Python33
-  - PYTHON: Python33-x64
   - PYTHON: Python34
   - PYTHON: Python34-x64
   - PYTHON: Python35
