@@ -1,5 +1,11 @@
 # Changes
 
+## 1.3.0 (Apr 9, 2019)
+
+* Added optional dependency for `cryptography` for faster RC4 cipher calls
+* Removed the deprecation warning for Ntlm, this is still advised not to use but there's no major harm keep it in place for older hosts
+* Add CI test for Python 3.7 and 3.8
+
 ## 1.2.0 (Jun 7, 2018)
 
 * Deprecated ntlm_auth.ntlm.Ntlm in favour of ntlm_auth.ntlm.NtlmContext
