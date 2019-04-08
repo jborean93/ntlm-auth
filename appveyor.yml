@@ -44,4 +44,4 @@ install:
 build: off
 
 test_script:
-- ps: py.test -v --pep8 --cov ntlm_auth --cov-report term-missing
+- cmd: py.test -v --pep8 --cov ntlm_auth --cov-report term-missing
