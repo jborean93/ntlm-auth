@@ -3,8 +3,27 @@
 
 import struct
 
+# Favour cryptography over our Python implementation as it is a lot faster
+try:
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.backends import default_backend
+    HAS_CRYPTOGRAPHY = True
+except ImportError:  # pragma: no cover
+    HAS_CRYPTOGRAPHY = False
 
-class ARC4(object):
+
+class _CryptographyARC4(object):
+
+    def __init__(self, key):
+        algo = algorithms.ARC4(key)
+        cipher = Cipher(algo, mode=None, backend=default_backend())
+        self._encryptor = cipher.encryptor()
+
+    def update(self, value):
+        return self._encryptor.update(value)
+
+
+class _PythonARC4(object):
     state = None
     i = 0
     j = 0
@@ -40,3 +59,9 @@ class ARC4(object):
             self.state[self.i], self.state[self.j] = \
                 self.state[self.j], self.state[self.i]
             yield self.state[(self.state[self.i] + self.state[self.j]) % 256]
+
+
+if HAS_CRYPTOGRAPHY:
+    ARC4 = _CryptographyARC4
+else:  # pragma: no cover
+    ARC4 = _PythonARC4

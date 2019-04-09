@@ -8,7 +8,6 @@ import hmac
 import os
 import struct
 import time
-import warnings
 
 import ntlm_auth.compute_hash as comphash
 import ntlm_auth.compute_keys as compkeys
@@ -180,10 +179,9 @@ class ComputeResponse():
                     struct.pack("<L", AvFlags.MIC_PROVIDED)
 
             if server_certificate_hash is not None and cbt_data is None:
-                warnings.warn("Manually creating the cbt stuct from the cert "
-                              "hash will be removed in a newer version of "
-                              "ntlm-auth. Send the actual CBT struct using "
-                              "cbt_data instead", DeprecationWarning)
+                # Older method of creating CBT struct based on the cert hash.
+                # This should be avoided in favour of an explicit
+                # GssChannelBindingStruct being passed in.
                 certificate_digest = base64.b16decode(server_certificate_hash)
 
                 cbt_data = GssChannelBindingsStruct()

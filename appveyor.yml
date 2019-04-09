@@ -19,6 +19,8 @@ environment:
   - PYTHON: Python35-x64
   - PYTHON: Python36
   - PYTHON: Python36-x64
+  - PYTHON: Python37
+  - PYTHON: Python37-x64
 
 services:
 - iis
@@ -33,13 +35,13 @@ init:
     $env:NTLM_PASSWORD = [Microsoft.Win32.Registry]::GetValue("HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon", "DefaultPassword", '')
 
 install:
-- ps: |
-    pip install -U pip setuptools
-    pip install .
-    pip install -r requirements-test.txt
+- cmd: python -m pip install --upgrade pip
+- cmd: pip install --upgrade setuptools
+- cmd: pip install -r requirements-test.txt
+- cmd: pip install .[cryptography]
 - cmd: PowerShell.exe -File appveyor\setup_iis.ps1
 
 build: off
 
 test_script:
-- ps: py.test -v --pep8 --cov ntlm_auth --cov-report term-missing
+- cmd: py.test -v --pep8 --cov ntlm_auth --cov-report term-missing

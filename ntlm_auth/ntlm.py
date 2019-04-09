@@ -3,7 +3,6 @@
 
 import base64
 import struct
-import warnings
 
 from ntlm_auth.constants import NegotiateFlags
 from ntlm_auth.exceptions import NoAuthContextError
@@ -16,7 +15,7 @@ class NtlmContext(object):
 
     def __init__(self, username, password, domain=None, workstation=None,
                  cbt_data=None, ntlm_compatibility=3):
-        """
+        r"""
         Initialises a NTLM context to use when authenticating using the NTLM
         protocol.
         Initialises the NTLM context to use when sending and receiving messages
@@ -144,9 +143,6 @@ class Ntlm(object):
         self._context = NtlmContext(None, None,
                                     ntlm_compatibility=ntlm_compatibility)
         self._challenge_token = None
-        warnings.warn("Using Ntlm() is deprecated and will be removed in a "
-                      "future version. Use NtlmContext() instead",
-                      DeprecationWarning)
 
     @property
     def negotiate_flags(self):
