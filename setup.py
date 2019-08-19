@@ -13,7 +13,7 @@ except ImportError:
 
 setup(
     name='ntlm-auth',
-    version='1.3.0',
+    version='1.4.0',
     packages=['ntlm_auth'],
     install_requires=[],
     extras_require={

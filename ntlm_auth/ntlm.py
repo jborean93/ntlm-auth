@@ -49,6 +49,7 @@ class NtlmContext(object):
         self._server_certificate_hash = None  # deprecated for backwards compat
         self.ntlm_compatibility = ntlm_compatibility
         self.complete = False
+        self.session_key = None
 
         # Setting up our flags so the challenge message returns the target info
         # block if supported
@@ -91,6 +92,7 @@ class NtlmContext(object):
             flags = struct.unpack("<I", flag_bytes)[0]
             if flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SEAL or \
                     flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SIGN:
+                self.session_key = self._authenticate_message.exported_session_key
                 self._session_security = SessionSecurity(
                     flags, self._authenticate_message.exported_session_key
                 )
