@@ -1,8 +1,8 @@
 # Changes
 
-## 1.4.0 (Aug 19, 2019(
+## 1.4.0 (Aug 19, 2019)
 
-* Added the `session_key` attribute to the `NtlmContext` class publically expose the session key negotiated in the auth.
+* Added the `session_key` attribute to the `NtlmContext` class so the session key can be accessed in downstream libraries
 
 ## 1.3.0 (Apr 9, 2019)
 
