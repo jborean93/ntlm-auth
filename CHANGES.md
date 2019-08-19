@@ -1,5 +1,9 @@
 # Changes
 
+## 1.4.0 (Aug 19, 2019(
+
+* Added the `session_key` attribute to the `NtlmContext` class publically expose the session key negotiated in the auth.
+
 ## 1.3.0 (Apr 9, 2019)
 
 * Added optional dependency for `cryptography` for faster RC4 cipher calls
