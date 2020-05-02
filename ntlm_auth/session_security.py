@@ -102,35 +102,34 @@ class SessionSecurity(object):
         self.exported_session_key = exported_session_key
         self.outgoing_seq_num = 0
         self.incoming_seq_num = 0
+        self._source = source
+        self._client_sealing_key = compkeys.get_seal_key(self.negotiate_flags, exported_session_key,
+                                                         SignSealConstants.CLIENT_SEALING)
+        self._server_sealing_key = compkeys.get_seal_key(self.negotiate_flags, exported_session_key,
+                                                         SignSealConstants.SERVER_SEALING)
 
-        client_sealing_key = \
-            compkeys.get_seal_key(self.negotiate_flags, exported_session_key,
-                                  SignSealConstants.CLIENT_SEALING)
-        server_sealing_key = \
-            compkeys.get_seal_key(self.negotiate_flags, exported_session_key,
-                                  SignSealConstants.SERVER_SEALING)
+        self.outgoing_handle = None
+        self.incoming_handle = None
+        self.reset_rc4_state(True)
+        self.reset_rc4_state(False)
 
         if source == "client":
-            self.outgoing_signing_key = \
-                compkeys.get_sign_key(exported_session_key,
-                                      SignSealConstants.CLIENT_SIGNING)
-            self.incoming_signing_key = \
-                compkeys.get_sign_key(exported_session_key,
-                                      SignSealConstants.SERVER_SIGNING)
-            self.outgoing_handle = ARC4(client_sealing_key)
-            self.incoming_handle = ARC4(server_sealing_key)
+            self.outgoing_signing_key = compkeys.get_sign_key(exported_session_key, SignSealConstants.CLIENT_SIGNING)
+            self.incoming_signing_key = compkeys.get_sign_key(exported_session_key, SignSealConstants.SERVER_SIGNING)
         elif source == "server":
-            self.outgoing_signing_key = \
-                compkeys.get_sign_key(exported_session_key,
-                                      SignSealConstants.SERVER_SIGNING)
-            self.incoming_signing_key = \
-                compkeys.get_sign_key(exported_session_key,
-                                      SignSealConstants.CLIENT_SIGNING)
-            self.outgoing_handle = ARC4(server_sealing_key)
-            self.incoming_handle = ARC4(client_sealing_key)
+            self.outgoing_signing_key = compkeys.get_sign_key(exported_session_key, SignSealConstants.SERVER_SIGNING)
+            self.incoming_signing_key = compkeys.get_sign_key(exported_session_key, SignSealConstants.CLIENT_SIGNING)
         else:
             raise ValueError("Invalid source parameter %s, must be client "
                              "or server" % source)
+
+    def reset_rc4_state(self, outgoing=True):
+        csk = self._client_sealing_key
+        ssk = self._server_sealing_key
+        if outgoing:
+            self.outgoing_handle = ARC4(csk if self._source == 'client' else ssk)
+        else:
+            self.incoming_handle = ARC4(ssk if self._source == 'client' else csk)
 
     def wrap(self, message):
         """
@@ -147,11 +146,11 @@ class SessionSecurity(object):
         """
         if self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SEAL:
             encrypted_message = self._seal_message(message)
-            signature = self._get_signature(message)
+            signature = self.get_signature(message)
             message = encrypted_message
 
         elif self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SIGN:
-            signature = self._get_signature(message)
+            signature = self.get_signature(message)
         else:
             signature = None
 
@@ -172,10 +171,10 @@ class SessionSecurity(object):
         """
         if self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SEAL:
             message = self._unseal_message(message)
-            self._verify_signature(message, signature)
+            self.verify_signature(message, signature)
 
         elif self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SIGN:
-            self._verify_signature(message, signature)
+            self.verify_signature(message, signature)
 
         return message
 
@@ -207,7 +206,7 @@ class SessionSecurity(object):
         decrypted_message = self.incoming_handle.update(message)
         return decrypted_message
 
-    def _get_signature(self, message):
+    def get_signature(self, message):
         """
         [MS-NLMP] v28.0 2016-07-14
 
@@ -227,7 +226,7 @@ class SessionSecurity(object):
 
         return signature.get_data()
 
-    def _verify_signature(self, message, signature):
+    def verify_signature(self, message, signature):
         """
         Will verify that the signature received from the server matches up with
         the expected signature computed locally. Will throw an exception if

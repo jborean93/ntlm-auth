@@ -21,6 +21,8 @@ environment:
   - PYTHON: Python36-x64
   - PYTHON: Python37
   - PYTHON: Python37-x64
+  - PYTHON: Python38
+  - PYTHON: Python38-x64
 
 services:
 - iis

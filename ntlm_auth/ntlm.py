@@ -49,7 +49,6 @@ class NtlmContext(object):
         self._server_certificate_hash = None  # deprecated for backwards compat
         self.ntlm_compatibility = ntlm_compatibility
         self.complete = False
-        self.session_key = None
 
         # Setting up our flags so the challenge message returns the target info
         # block if supported
@@ -70,6 +69,23 @@ class NtlmContext(object):
         self._challenge_message = None
         self._authenticate_message = None
         self._session_security = None
+
+    @property
+    def mic_present(self):
+        if self._authenticate_message:
+            return bool(self._authenticate_message.mic)
+
+        return False
+
+    @property
+    def session_key(self):
+        if self._authenticate_message:
+            return self._authenticate_message.exported_session_key
+
+    def reset_rc4_state(self, outgoing=True):
+        """ Resets the signing cipher for the incoming or outgoing cipher. For SPNEGO for calculating mechListMIC. """
+        if self._session_security:
+            self._session_security.reset_rc4_state(outgoing=outgoing)
 
     def step(self, input_token=None):
         if self._negotiate_message is None:
@@ -92,13 +108,18 @@ class NtlmContext(object):
             flags = struct.unpack("<I", flag_bytes)[0]
             if flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SEAL or \
                     flags & NegotiateFlags.NTLMSSP_NEGOTIATE_SIGN:
-                self.session_key = self._authenticate_message.exported_session_key
                 self._session_security = SessionSecurity(
-                    flags, self._authenticate_message.exported_session_key
+                    flags, self.session_key
                 )
 
             self.complete = True
             return self._authenticate_message.get_data()
+
+    def sign(self, data):
+        return self._session_security.get_signature(data)
+
+    def verify(self, data, signature):
+        self._session_security.verify_signature(data, signature)
 
     def wrap(self, data):
         if self._session_security is None:

@@ -1,5 +1,12 @@
 # Changes
 
+## 1.5.0 TBD
+
+* Added the `mic_present` property to the `NtlmContext` class to determine if a MIC has been added to the authentication message.
+* Added the `sign` and `verify` function to the `NtlmContext` to sign data and verify signatures.
+* Added the `reset_rc4_state` function to the `NtlmContext` to allow a caller to reset the incoming and outgoing RC4 cipher.
+* Added the `NTLMSSP_NEGOTIATE_UNICODE` flag to the negotiate message to ensure the challenge and authentication message's text fields can be unicode encoded
+
 ## 1.4.0 (Aug 19, 2019)
 
 * Added the `session_key` attribute to the `NtlmContext` class so the session key can be accessed in downstream libraries

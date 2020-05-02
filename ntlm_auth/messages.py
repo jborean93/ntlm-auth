@@ -110,10 +110,11 @@ class NegotiateMessage(object):
             negotiate_flags |= \
                 NegotiateFlags.NTLMSSP_NEGOTIATE_OEM_WORKSTATION_SUPPLIED
 
-        # Set the encoding flag to use OEM, remove UNICODE if set as it isn't
-        # support in this message
-        negotiate_flags -= NegotiateFlags.NTLMSSP_NEGOTIATE_UNICODE
-        negotiate_flags |= NegotiateFlags.NTLMSSP_NEGOTIATE_OEM
+        # Set the encoding flag to use UNICODE, remove OEM if set.
+        negotiate_flags |= NegotiateFlags.NTLMSSP_NEGOTIATE_UNICODE
+        negotiate_flags &= ~NegotiateFlags.NTLMSSP_NEGOTIATE_OEM
+
+        # The domain name and workstation are always OEM encoded.
         self.domain_name = self.domain_name.encode('ascii')
         self.workstation = self.workstation.encode('ascii')
 
