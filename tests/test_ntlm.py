@@ -9,7 +9,7 @@ import pytest
 
 from requests.auth import AuthBase
 
-from ntlm_auth.constants import AvId, NegotiateFlags
+from ntlm_auth.constants import NegotiateFlags
 from ntlm_auth.exceptions import NoAuthContextError
 from ntlm_auth.gss_channel_bindings import GssChannelBindingsStruct
 from ntlm_auth.ntlm import Ntlm, NtlmContext
