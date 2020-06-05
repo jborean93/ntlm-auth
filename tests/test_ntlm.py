@@ -126,8 +126,7 @@ class TestMessages(object):
     # permutations are in test_message.py
     def test_create_negotiate_message(self):
         ntlm_context = Ntlm()
-        expected = b'TlRMTVNTUAABAAAAMrCI4gYABgAoAAAACAAIAC4AAAA' \
-                   b'GAbEdAAAAD0RvbWFpbkNPTVBVVEVS'
+        expected = b'TlRMTVNTUAABAAAAMbCI4gYABgAoAAAACAAIAC4AAAAGAbEdAAAAD0RvbWFpbkNPTVBVVEVS'
         actual = ntlm_context.create_negotiate_message("Domain", "COMPUTER")
         assert actual == expected
 
@@ -312,8 +311,6 @@ class TestNtlmContext(object):
         monkeypatch.setattr('ntlm_auth.compute_response.get_windows_timestamp',
                             lambda: b"\x00" * 8)
 
-        import binascii
-
         ch = 'E3CA49271E5089CC48CE82109F1324F41DBEDDC29A777410C738F7868C4FF405'
         cbt_data = GssChannelBindingsStruct()
         cbt_data[cbt_data.APPLICATION_DATA] = b"tls-server-end-point:" + \
@@ -322,13 +319,14 @@ class TestNtlmContext(object):
                                    cbt_data=cbt_data)
         actual_nego = ntlm_context.step()
         expected_nego = b"\x4e\x54\x4c\x4d\x53\x53\x50\x00" \
-                        b"\x01\x00\x00\x00\x32\xb0\x88\xe2" \
+                        b"\x01\x00\x00\x00\x31\xb0\x88\xe2" \
                         b"\x06\x00\x06\x00\x28\x00\x00\x00" \
                         b"\x08\x00\x08\x00\x2e\x00\x00\x00" \
                         b"\x05\x01\x28\x0a\x00\x00\x00\x0f" \
                         b"\x44\x6f\x6d\x61\x69\x6e\x43\x4f" \
                         b"\x4d\x50\x55\x54\x45\x52"
         assert actual_nego == expected_nego
+        assert not ntlm_context.mic_present
         assert not ntlm_context.complete
 
         challenge_msg = b"\x4e\x54\x4c\x4d\x53\x53\x50\x00" \
@@ -380,6 +378,7 @@ class TestNtlmContext(object):
 
         assert actual_auth == expected_auth
         assert ntlm_context.complete
+        assert not ntlm_context.mic_present
 
         request_msg = b"test req"
         response_msg = b"test res"
@@ -403,6 +402,132 @@ class TestNtlmContext(object):
             response_wrapped[1] + response_wrapped[0]
         )
         assert actual_unwrap == response_msg
+
+    def test_ntlm_context_with_mic(self, monkeypatch):
+        monkeypatch.setattr('os.urandom', lambda s: b"\xaa" * 8)
+        monkeypatch.setattr('ntlm_auth.messages.get_version', lambda s: b"\x05\x01\x28\x0A\x00\x00\x00\x0F")
+        monkeypatch.setattr('ntlm_auth.messages.get_random_export_session_key', lambda: b"\x55" * 16)
+        monkeypatch.setattr('ntlm_auth.compute_response.get_windows_timestamp', lambda: b"\x00" * 8)
+
+        ch = 'E3CA49271E5089CC48CE82109F1324F41DBEDDC29A777410C738F7868C4FF405'
+        cbt_data = GssChannelBindingsStruct()
+        cbt_data[cbt_data.APPLICATION_DATA] = b"tls-server-end-point:" + \
+                                              base64.b16decode(ch)
+        ntlm_context = NtlmContext("User", "Password", "Domain", "COMPUTER",
+                                   cbt_data=cbt_data)
+        ntlm_context.reset_rc4_state()  # Verifies it won't fail when the session security isn't set up.
+
+        actual_nego = ntlm_context.step()
+        expected_nego = b"\x4e\x54\x4c\x4d\x53\x53\x50\x00" \
+                        b"\x01\x00\x00\x00\x31\xb0\x88\xe2" \
+                        b"\x06\x00\x06\x00\x28\x00\x00\x00" \
+                        b"\x08\x00\x08\x00\x2e\x00\x00\x00" \
+                        b"\x05\x01\x28\x0a\x00\x00\x00\x0f" \
+                        b"\x44\x6f\x6d\x61\x69\x6e\x43\x4f" \
+                        b"\x4d\x50\x55\x54\x45\x52"
+        assert actual_nego == expected_nego
+        assert not ntlm_context.mic_present
+        assert not ntlm_context.complete
+
+        challenge_msg = b"\x4E\x54\x4C\x4D\x53\x53\x50\x00" \
+                        b"\x02\x00\x00\x00\x00\x00\x00\x00" \
+                        b"\x38\x00\x00\x00\x33\x82\x8A\xE2" \
+                        b"\x01\x23\x45\x67\x89\xAB\xCD\xEF" \
+                        b"\x00\x00\x00\x00\x00\x00\x00\x00" \
+                        b"\x30\x00\x30\x00\x38\x00\x00\x00" \
+                        b"\x06\x01\xB1\x1D\x00\x00\x00\x0F" \
+                        b"\x02\x00\x0C\x00\x44\x00\x6F\x00" \
+                        b"\x6D\x00\x61\x00\x69\x00\x6E\x00" \
+                        b"\x01\x00\x0C\x00\x53\x00\x65\x00" \
+                        b"\x72\x00\x76\x00\x65\x00\x72\x00" \
+                        b"\x07\x00\x08\x00\x00\x00\x00\x00" \
+                        b"\x00\x00\x00\x00\x00\x00\x00\x00"
+        actual_auth = ntlm_context.step(challenge_msg)
+        expected_auth = b'\x4E\x54\x4C\x4D\x53\x53\x50\x00' \
+                        b'\x03\x00\x00\x00\x18\x00\x18\x00' \
+                        b'\x7C\x00\x00\x00\x7C\x00\x7C\x00' \
+                        b'\x94\x00\x00\x00\x0C\x00\x0C\x00' \
+                        b'\x58\x00\x00\x00\x08\x00\x08\x00' \
+                        b'\x64\x00\x00\x00\x10\x00\x10\x00' \
+                        b'\x6C\x00\x00\x00\x10\x00\x10\x00' \
+                        b'\x10\x01\x00\x00\x31\x82\x8A\xE2' \
+                        b'\x05\x01\x28\x0A\x00\x00\x00\x0F' \
+                        b'\xC4\x45\x2C\xF7\xA8\x1E\x4D\x11' \
+                        b'\xD0\x78\x18\x94\x09\x57\x5D\x9E' \
+                        b'\x44\x00\x6F\x00\x6D\x00\x61\x00' \
+                        b'\x69\x00\x6E\x00\x55\x00\x73\x00' \
+                        b'\x65\x00\x72\x00\x43\x00\x4F\x00' \
+                        b'\x4D\x00\x50\x00\x55\x00\x54\x00' \
+                        b'\x45\x00\x52\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\xA1\x3D\x03\x8A' \
+                        b'\xD0\xCA\x02\x64\x33\x89\x7C\x33' \
+                        b'\x5E\x0F\x56\xDF\x01\x01\x00\x00' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\xAA\xAA\xAA\xAA' \
+                        b'\xAA\xAA\xAA\xAA\x00\x00\x00\x00' \
+                        b'\x02\x00\x0C\x00\x44\x00\x6F\x00' \
+                        b'\x6D\x00\x61\x00\x69\x00\x6E\x00' \
+                        b'\x01\x00\x0C\x00\x53\x00\x65\x00' \
+                        b'\x72\x00\x76\x00\x65\x00\x72\x00' \
+                        b'\x07\x00\x08\x00\x00\x00\x00\x00' \
+                        b'\x00\x00\x00\x00\x06\x00\x04\x00' \
+                        b'\x02\x00\x00\x00\x0A\x00\x10\x00' \
+                        b'\x6E\xA1\x9D\xF0\x66\xDA\x46\x22' \
+                        b'\x05\x1F\x9C\x4F\x92\xC6\xDF\x74' \
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00' \
+                        b'\x1D\x08\x89\xD1\xA5\xEE\xED\x21' \
+                        b'\x91\x9E\x1A\xB8\x27\xC3\x0B\x17'
+
+        assert actual_auth == expected_auth
+        assert ntlm_context.complete
+        assert ntlm_context.mic_present
+
+        request_msg = b"test req"
+        response_msg = b"test res"
+        actual_wrapped = ntlm_context.wrap(request_msg)
+        expected_wrapped = b"\x01\x00\x00\x00\xbc\xe3\x23\xa1" \
+                           b"\x72\x06\x23\x78\x00\x00\x00\x00" \
+                           b"\x70\x80\x1e\x11\xfe\x6b\x3a\xad"
+        assert actual_wrapped == expected_wrapped
+
+        server_sec = SessionSecurity(
+            ntlm_context._session_security.negotiate_flags,
+            ntlm_context._session_security.exported_session_key, "server"
+        )
+        server_unwrap = server_sec.unwrap(actual_wrapped[16:],
+                                          actual_wrapped[0:16])
+        assert server_unwrap == request_msg
+
+        response_wrapped = server_sec.wrap(response_msg)
+
+        actual_unwrap = ntlm_context.unwrap(
+            response_wrapped[1] + response_wrapped[0]
+        )
+        assert actual_unwrap == response_msg
+
+        msg = b"Hello"
+        actual_sig1 = ntlm_context.sign(msg)
+        expected_sig1 = b"\x01\x00\x00\x00\x08\xF0\x0D\x86\x34\x05\x1A\x1D\x01\x00\x00\x00"
+        assert actual_sig1 == expected_sig1
+        server_sec.verify_signature(msg, actual_sig1)
+
+        actual_sig2 = ntlm_context.sign(msg)
+        expected_sig2 = b"\x01\x00\x00\x00\x07\x64\x0C\x30\x1C\xD7\x76\xF0\x02\x00\x00\x00"
+        assert actual_sig2 == expected_sig2
+        server_sec.verify_signature(msg, actual_sig2)
+
+        ntlm_context.reset_rc4_state()
+        actual_sig3 = ntlm_context.sign(msg)
+        expected_sig3 = b"\x01\x00\x00\x00\x1E\xD4\xA3\xE5\xE8\x05\x74\x01\x03\x00\x00\x00"
+        assert actual_sig3 == expected_sig3
+
+        server_sec.reset_rc4_state(outgoing=False)
+        server_sec.verify_signature(msg, actual_sig3)
+
+        server_sig = server_sec.get_signature(msg)
+        ntlm_context.verify(msg, server_sig)
 
     def test_fail_wrap_no_context(self):
         ntlm_context = NtlmContext("", "")

@@ -1,6 +1,6 @@
 language: python
 
-dist: xenial
+dist: bionic
 
 matrix:
   include:
@@ -13,12 +13,14 @@ matrix:
     dist: trusty
   - python: 3.6
   - python: 3.7
-  - python: 3.8-dev
+  - python: 3.8
 
-  # 3.8 is still an alpha and this is just running to make sure nothing major
+  - python: 3.9-dev
+
+  # 3.9 is still an alpha and this is just running to make sure nothing major
   # breaks but we don't want it to stop the build
   allow_failures:
-  - python: 3.8-dev
+  - python: 3.9-dev
 
 install:
 - pip install --upgrade pip setuptools

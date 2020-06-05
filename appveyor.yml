@@ -13,14 +13,14 @@ environment:
   # https://www.appveyor.com/docs/installed-software/#python
   - PYTHON: Python27
   - PYTHON: Python27-x64
-  - PYTHON: Python34
-  - PYTHON: Python34-x64
   - PYTHON: Python35
   - PYTHON: Python35-x64
   - PYTHON: Python36
   - PYTHON: Python36-x64
   - PYTHON: Python37
   - PYTHON: Python37-x64
+  - PYTHON: Python38
+  - PYTHON: Python38-x64
 
 services:
 - iis
