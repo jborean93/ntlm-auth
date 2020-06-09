@@ -331,7 +331,7 @@ class AuthenticateMessage(object):
             self.workstation = workstation
 
         if self.negotiate_flags & NegotiateFlags.NTLMSSP_NEGOTIATE_UNICODE:
-            self.negotiate_flags -= NegotiateFlags.NTLMSSP_NEGOTIATE_OEM
+            self.negotiate_flags &= ~NegotiateFlags.NTLMSSP_NEGOTIATE_OEM
             encoding_value = 'utf-16-le'
         else:
             encoding_value = 'ascii'
