@@ -1,6 +1,6 @@
 # Changes
 
-## 1.5.0 TBD
+## 1.5.0 (Jun 16, 2020)
 
 * Added the `mic_present` property to the `NtlmContext` class to determine if a MIC has been added to the authentication message.
 * Added the `sign` and `verify` function to the `NtlmContext` to sign data and verify signatures.
