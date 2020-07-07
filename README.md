@@ -2,6 +2,27 @@ ntlm-auth
 =========
 [![Build Status](https://travis-ci.org/jborean93/ntlm-auth.svg?branch=master)](https://travis-ci.org/jborean93/ntlm-auth)[![Build status](https://ci.appveyor.com/api/projects/status/osvvfgmhfk4anvu0/branch/master?svg=true)](https://ci.appveyor.com/project/jborean93/ntlm-auth/branch/master)[![Coverage Status](https://coveralls.io/repos/github/jborean93/ntlm-auth/badge.svg?branch=master)](https://coveralls.io/github/jborean93/ntlm-auth?branch=master)
 
+# This library is deprecated in favour of [pyspnego](https://github.com/jborean93/pyspnego)
+
+An example of an NTLM auth exchange in `pyspnego` is as follows:
+
+```python
+import spnego
+
+def exchange_data(data):
+    # INSERT CODE TO TRANSFER TO SERVER AND RETURN RESPONSE
+    return b""
+
+client = spnego.client('username', 'password', protocol='ntlm')
+negotiate = client.step()
+
+challenge = exchange_data(negotiate)
+authenticate = client.step(challenge)
+exchange_data(authenticate)
+```
+
+This library also supports Kerberos and Negotiate/SPNEGO authentication. While `ntlm-auth` is not going away, no new features will be added.
+
 About this library
 ------------------
 
